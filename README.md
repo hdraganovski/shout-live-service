@@ -1,19 +1,17 @@
-# kotlin-getting-started
+# ktor-heroku-getting-started
 
-A barebones Kotlin app, which can easily be deployed to Heroku.
-
-This application supports the [Getting Started with Kotlin on Heroku](https://devcenter.heroku.com/articles/getting-started-with-kotlin) article - check it out.
+A barebones Kotlin app using [Ktor](https://ktor.io) framework, which can easily be deployed to Heroku.
 
 [![Deploy to Heroku](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy)
 
 ## Running Locally
 
-Make sure you have Java and Maven installed.  Also, install the [Heroku CLI](https://cli.heroku.com/).
+Make sure you have Java and Gradle installed.  Also, install the [Heroku CLI](https://cli.heroku.com/).
 
 ```sh
-$ git clone https://github.com/heroku/kotlin-getting-started.git
-$ cd kotlin-getting-started
-$ mvn install
+$ git clone https://github.com/yarieldis/ktor-heroku-getting-started.git
+$ cd ktor-heroku-getting-started
+$ ./gradlew build
 $ heroku local:start
 ```
 
