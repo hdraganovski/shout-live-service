@@ -1,13 +1,24 @@
 package com.example
 
-import org.springframework.boot.SpringApplication
-import org.springframework.boot.autoconfigure.SpringBootApplication
+import io.ktor.application.*
+import io.ktor.http.*
+import io.ktor.response.*
+import io.ktor.routing.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
 
-@SpringBootApplication
-open class Application {
-    companion object {
-        @JvmStatic fun main(args: Array<String>) {
-            SpringApplication.run(Application::class.java, *args)
+fun main(args: Array<String>) {
+    val jsonResponse = """{
+        "id": 1,
+        "task": "Pay waterbill",
+        "description": "Pay water bill today",
+    }"""
+
+    embeddedServer(Netty, 8080) {
+        install(Routing) {
+            get("/todo") {
+                call.respondText(jsonResponse, ContentType.Application.Json)
+            }
         }
-    }
+    }.start(wait = true)
 }
