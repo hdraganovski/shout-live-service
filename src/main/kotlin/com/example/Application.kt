@@ -14,7 +14,7 @@ fun main(args: Array<String>) {
         "description": "Pay water bill today",
     }"""
 
-    embeddedServer(Netty, 8080) {
+    embeddedServer(Netty, 80) {
         install(Routing) {
             get("/") {
                 call.respondText("Hello World!", ContentType.Text.Plain)
