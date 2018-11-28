@@ -13,8 +13,8 @@ fun main(args: Array<String>) {
         "task": "Pay waterbill",
         "description": "Pay water bill today",
     }"""
-
-    embeddedServer(Netty, 80) {
+    val port = Integer.valueOf(System.getenv("PORT"))
+    embeddedServer(Netty, port) {
         install(Routing) {
             get("/") {
                 call.respondText("Hello World!", ContentType.Text.Plain)
