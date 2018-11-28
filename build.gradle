@@ -23,6 +23,8 @@ jar {
     version = '1.0'
 }
 
+task stage(dependsOn: ['installDist'])
+
 repositories {
     mavenCentral()
     jcenter()
