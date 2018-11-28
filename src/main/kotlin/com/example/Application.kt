@@ -16,6 +16,9 @@ fun main(args: Array<String>) {
 
     embeddedServer(Netty, 8080) {
         install(Routing) {
+            get("/") {
+                call.respondText("Hello World!", ContentType.Text.Plain)
+            }
             get("/todo") {
                 call.respondText(jsonResponse, ContentType.Application.Json)
             }
