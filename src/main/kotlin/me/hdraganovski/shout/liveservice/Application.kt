@@ -19,9 +19,10 @@ import io.ktor.sessions.*
 import io.ktor.util.generateNonce
 import io.ktor.websocket.webSocket
 import org.slf4j.event.Level
+import java.time.Duration
 
 fun main(args: Array<String>) {
-    
+
     val port = Integer.valueOf(System.getenv("PORT"))
     embeddedServer(Netty, port) {
         liveServiceModule()
@@ -44,6 +45,13 @@ fun Application.liveServiceModule(testing: Boolean = false) {
         header("MyCustomHeader")
         allowCredentials = true
         anyHost() // @TODO: Don't do this in production if possible. Try to limit it.
+    }
+
+    install(io.ktor.websocket.WebSockets) {
+        pingPeriod = Duration.ofSeconds(15)
+        timeout = Duration.ofSeconds(15)
+        maxFrameSize = Long.MAX_VALUE
+        masking = false
     }
 
     install(Authentication) {
