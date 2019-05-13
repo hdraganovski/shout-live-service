@@ -26,6 +26,7 @@ import kotlinx.coroutines.channels.consumeEach
 import me.dragon.shout.liveservice.LiveServer
 import me.hdraganovski.shout.liveservice.model.Topic
 import me.hdraganovski.shout.liveservice.model.User
+import me.hdraganovski.shout.liveservice.service.DatabaseFactory
 import me.hdraganovski.shout.liveservice.service.TopicService
 import me.hdraganovski.shout.liveservice.service.UserService
 import org.slf4j.event.Level
@@ -43,6 +44,8 @@ val server = LiveServer()
 
 
 fun Application.liveServiceModule(testing: Boolean = false) {
+
+    DatabaseFactory.init()
 
     install(CallLogging) {
         level = Level.INFO
@@ -124,12 +127,18 @@ fun Application.liveServiceModule(testing: Boolean = false) {
                 incoming.consumeEach { frame ->
                     // Frames can be [Text], [Binary], [Ping], [Pong], [Close].
                     // We are only interested in textual messages, so we filter it.
-                    if (frame is Frame.Text) {
-                        // Now it is time to process the text sent from the user.
-                        // At this point we have context about this connection, the session, the text and the server.
-                        // So we have everything we need.
-                        receivedMessage(session.id, frame.readText())
+                    when (frame) {
+                        is Frame.Text -> {
+                            // Now it is time to process the text sent from the user.
+                            // At this point we have context about this connection, the session, the text and the server.
+                            // So we have everything we need.
+                            receivedMessage(session.id, frame.readText())
+                        }
+                        is Frame.Ping -> {
+
+                        }
                     }
+
                 }
             } finally {
                 // Either if there was an error, of it the connection was closed gracefully.
