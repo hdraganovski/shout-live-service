@@ -1,1 +1,1 @@
-web: java -jar build/libs/ktor-heroku-getting-started-1.0.jar
+web: java -jar build/libs/shout-live-service-1.0.jar
