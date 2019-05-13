@@ -1,6 +1,5 @@
 package me.hdraganovski.shout.liveservice.service
 
-import me.dragon.shout.liveservice.model.*
 import me.hdraganovski.shout.liveservice.service.DatabaseFactory.dbQuery
 import me.hdraganovski.shout.liveservice.service.TopicService.toTopic
 import me.hdraganovski.shout.liveservice.service.UserService.toUser
