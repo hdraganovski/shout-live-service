@@ -7,10 +7,14 @@ import io.ktor.features.CORS
 import io.ktor.features.CallLogging
 import io.ktor.features.ContentNegotiation
 import io.ktor.http.*
+import io.ktor.http.cio.websocket.CloseReason
 import io.ktor.http.cio.websocket.Frame
+import io.ktor.http.cio.websocket.close
 import io.ktor.http.cio.websocket.readText
 import io.ktor.jackson.jackson
 import io.ktor.request.path
+import io.ktor.request.receive
+import io.ktor.request.receiveText
 import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.server.engine.*
@@ -18,6 +22,12 @@ import io.ktor.server.netty.*
 import io.ktor.sessions.*
 import io.ktor.util.generateNonce
 import io.ktor.websocket.webSocket
+import kotlinx.coroutines.channels.consumeEach
+import me.dragon.shout.liveservice.LiveServer
+import me.hdraganovski.shout.liveservice.model.Topic
+import me.hdraganovski.shout.liveservice.model.User
+import me.hdraganovski.shout.liveservice.service.TopicService
+import me.hdraganovski.shout.liveservice.service.UserService
 import org.slf4j.event.Level
 import java.time.Duration
 
@@ -28,6 +38,9 @@ fun main(args: Array<String>) {
         liveServiceModule()
     }.start(wait = true)
 }
+
+val server = LiveServer()
+
 
 fun Application.liveServiceModule(testing: Boolean = false) {
 
@@ -88,10 +101,89 @@ fun Application.liveServiceModule(testing: Boolean = false) {
                 }
             }
         }
+
+        webSocket("/ws") {
+            // First of all we get the session.
+            val session = call.sessions.get<LiveServiceSession>()
+
+            // We check that we actually have a session. We should always have one,
+            // since we have defined an interceptor before to set one.
+            if (session == null) {
+                close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session"))
+                return@webSocket
+            }
+
+            // We notify that a member joined by calling the server handler [memberJoin]
+            // This allows to associate the session id to a specific WebSocket connection.
+            server.memberJoin(session.id, this)
+
+            try {
+                // We starts receiving messages (frames).
+                // Since this is a coroutine. This coroutine is suspended until receiving frames.
+                // Once the connection is closed, this consumeEach will finish and the code will continue.
+                incoming.consumeEach { frame ->
+                    // Frames can be [Text], [Binary], [Ping], [Pong], [Close].
+                    // We are only interested in textual messages, so we filter it.
+                    if (frame is Frame.Text) {
+                        // Now it is time to process the text sent from the user.
+                        // At this point we have context about this connection, the session, the text and the server.
+                        // So we have everything we need.
+                        receivedMessage(session.id, frame.readText())
+                    }
+                }
+            } finally {
+                // Either if there was an error, of it the connection was closed gracefully.
+                // We notify the server that the member left.
+                server.memberLeft(session.id, this)
+            }
+        }
+
+        post("/broadcast") {
+            try {
+                val body = call.receiveText()
+                server.broadcast(body)
+                call.respond(HttpStatusCode.OK, "OK")
+            } finally {
+                call.respond(HttpStatusCode.InternalServerError, "Error")
+            }
+        }
+
+        get("/json/jackson") {
+            call.respond(mapOf("hello" to "world"))
+        }
+
+        route("/user") {
+            get("/") {
+                call.respond(UserService.getAll())
+            }
+            post("/") {
+                val user: User = call.receive()
+                call.respond(UserService.addUser(user))
+            }
+        }
+
+        route("/topic") {
+            get("/") {
+                call.respond(TopicService.getAll())
+            }
+
+            post("/") {
+                val topic: Topic = call.receive()
+                call.respond(TopicService.addTopic(topic))
+            }
+        }
+
+        route("/token") {
+            post("/") {
+
+            }
+        }
     }
-
 }
-
 
 data class LiveServiceSession(val id: String)
 
+private suspend fun receivedMessage(id: String, command: String) {
+    // We are going to handle commands (text starting with '/') and normal messages
+    server.message(id, command)
+}
