@@ -21,9 +21,16 @@ mainClassName='Application.kt'
 jar {
     baseName = 'ktor-heroku-getting-started'
     version = '1.0'
+
+    manifest {
+        attributes 'Main-Class': 'com.example.ApplicationKt'
+    }
+
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
 }
 
 task stage(dependsOn: ['installDist'])
+build.mustRunAfter clean
 
 repositories {
     mavenCentral()
