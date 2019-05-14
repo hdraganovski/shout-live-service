@@ -1,11 +1,10 @@
-package me.dragon.shout.liveservice
+package me.hdraganovski.shout.liveservice
 
 import io.ktor.http.cio.websocket.CloseReason
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.WebSocketSession
 import io.ktor.http.cio.websocket.close
 import kotlinx.coroutines.channels.ClosedSendChannelException
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger

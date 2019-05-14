@@ -31,7 +31,6 @@ import io.ktor.sessions.*
 import io.ktor.util.generateNonce
 import io.ktor.websocket.webSocket
 import kotlinx.coroutines.channels.consumeEach
-import me.dragon.shout.liveservice.LiveServer
 import org.slf4j.event.Level
 import java.time.Duration
 
