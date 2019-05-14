@@ -1,39 +1,41 @@
 package me.hdraganovski.shout.liveservice
 
 import com.fasterxml.jackson.databind.SerializationFeature
-import io.ktor.application.*
+import io.ktor.application.Application
+import io.ktor.application.ApplicationCallPipeline
+import io.ktor.application.call
+import io.ktor.application.install
 import io.ktor.auth.Authentication
 import io.ktor.features.CORS
 import io.ktor.features.CallLogging
 import io.ktor.features.ContentNegotiation
-import io.ktor.http.*
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.cio.websocket.CloseReason
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.close
 import io.ktor.http.cio.websocket.readText
 import io.ktor.jackson.jackson
 import io.ktor.request.path
-import io.ktor.request.receive
 import io.ktor.request.receiveText
-import io.ktor.response.*
-import io.ktor.routing.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
+import io.ktor.response.respond
+import io.ktor.response.respondText
+import io.ktor.routing.get
+import io.ktor.routing.post
+import io.ktor.routing.routing
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
 import io.ktor.sessions.*
 import io.ktor.util.generateNonce
 import io.ktor.websocket.webSocket
 import kotlinx.coroutines.channels.consumeEach
 import me.dragon.shout.liveservice.LiveServer
-import me.hdraganovski.shout.liveservice.model.Topic
-import me.hdraganovski.shout.liveservice.model.User
-import me.hdraganovski.shout.liveservice.service.DatabaseFactory
-import me.hdraganovski.shout.liveservice.service.TopicService
-import me.hdraganovski.shout.liveservice.service.UserService
 import org.slf4j.event.Level
 import java.time.Duration
 
 fun main(args: Array<String>) {
-
     val port = Integer.valueOf(System.getenv("PORT"))
     embeddedServer(Netty, port) {
         liveServiceModule()
@@ -45,7 +47,6 @@ val server = LiveServer()
 
 fun Application.liveServiceModule(testing: Boolean = false) {
 
-    DatabaseFactory.init()
 
     install(CallLogging) {
         level = Level.INFO
@@ -58,7 +59,6 @@ fun Application.liveServiceModule(testing: Boolean = false) {
         method(HttpMethod.Delete)
         method(HttpMethod.Patch)
         header(HttpHeaders.Authorization)
-        header("MyCustomHeader")
         allowCredentials = true
         anyHost() // @TODO: Don't do this in production if possible. Try to limit it.
     }
@@ -95,16 +95,6 @@ fun Application.liveServiceModule(testing: Boolean = false) {
             call.respondText("HELLO WORLD!", contentType = ContentType.Text.Plain)
         }
 
-        webSocket("/myws/echo") {
-            send(Frame.Text("Hi from server"))
-            while (true) {
-                val frame = incoming.receive()
-                if (frame is Frame.Text) {
-                    send(Frame.Text("Client said: " + frame.readText()))
-                }
-            }
-        }
-
         webSocket("/ws") {
             // First of all we get the session.
             val session = call.sessions.get<LiveServiceSession>()
@@ -134,9 +124,6 @@ fun Application.liveServiceModule(testing: Boolean = false) {
                             // So we have everything we need.
                             receivedMessage(session.id, frame.readText())
                         }
-                        is Frame.Ping -> {
-
-                        }
                     }
 
                 }
@@ -154,37 +141,6 @@ fun Application.liveServiceModule(testing: Boolean = false) {
                 call.respond(HttpStatusCode.OK, "OK")
             } finally {
                 call.respond(HttpStatusCode.InternalServerError, "Error")
-            }
-        }
-
-        get("/json/jackson") {
-            call.respond(mapOf("hello" to "world"))
-        }
-
-        route("/user") {
-            get("/") {
-                call.respond(UserService.getAll())
-            }
-            post("/") {
-                val user: User = call.receive()
-                call.respond(UserService.addUser(user))
-            }
-        }
-
-        route("/topic") {
-            get("/") {
-                call.respond(TopicService.getAll())
-            }
-
-            post("/") {
-                val topic: Topic = call.receive()
-                call.respond(TopicService.addTopic(topic))
-            }
-        }
-
-        route("/token") {
-            post("/") {
-
             }
         }
     }
