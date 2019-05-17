@@ -17,6 +17,7 @@ import io.ktor.http.cio.websocket.CloseReason
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.close
 import io.ktor.http.cio.websocket.readText
+import io.ktor.jackson.JacksonConverter
 import io.ktor.jackson.jackson
 import io.ktor.request.path
 import io.ktor.request.receiveText
@@ -35,7 +36,7 @@ import org.slf4j.event.Level
 import java.time.Duration
 
 fun main(args: Array<String>) {
-    val port = Integer.valueOf(System.getenv("PORT"))
+    val port = Integer.valueOf(System.getenv("PORT") ?: "8080")
     embeddedServer(Netty, port) {
         liveServiceModule()
     }.start(wait = true)
@@ -149,5 +150,12 @@ data class LiveServiceSession(val id: String)
 
 private suspend fun receivedMessage(id: String, command: String) {
     // We are going to handle commands (text starting with '/') and normal messages
-    server.message(id, command)
+
+        when {
+            command.startsWith("/dump") -> server.dump(member = id)
+            command.startsWith("/distance") -> server.setDistance(id, command.removePrefix("/distance"))
+            command.startsWith("/location", true) -> server.setLocation(id, command.removePrefix("/location"))
+            command.startsWith("/removeLocation", true) -> server.removeLocation(id)
+            else -> server.message(id, "[ERROR] No such command: $command")
+        }
 }

@@ -1,5 +1,6 @@
 package me.hdraganovski.shout.liveservice
 
+import com.fasterxml.jackson.databind.exc.InvalidFormatException
 import io.ktor.http.cio.websocket.CloseReason
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.WebSocketSession
@@ -19,6 +20,11 @@ class LiveServer {
     val memberNames = ConcurrentHashMap<String, String>()
 
     /**
+     * A concurrent map associating session IDs to user data
+     */
+    private val memberData = ConcurrentHashMap<String, MemberData>()
+
+    /**
      * Associates a session-id to a set of websockets.
      * Since a browser is able to open several tabs and windows with the same cookies and thus the same session.
      * There might be several opened sockets for the same client.
@@ -31,6 +37,8 @@ class LiveServer {
     suspend fun memberJoin(member: String, socket: WebSocketSession) {
         // Checks if this user is already registered in the server and gives him/her a temporal name if required.
         val name = memberNames.computeIfAbsent(member) { "user${usersCounter.incrementAndGet()}" }
+
+        memberData.computeIfAbsent(member) { MemberData(null, true) }
 
         // Associates this socket to the member id.
         // Since iteration is likely to happen more frequently than adding new items,
@@ -53,7 +61,46 @@ class LiveServer {
         // If no more sockets are connected for this member, let's remove it from the server
         // and notify the rest of the users about this event.
         if (connections != null && connections.isEmpty()) {
-            val name = memberNames.remove(member) ?: member
+            memberData.remove(member)
+            members.remove(member)
+        }
+    }
+
+    suspend fun setLocation(member: String, location: Location) {
+        memberData[member]?.apply {
+            this.location = location
+            this.global = false
+        }
+        sendTo(member, "INFO", "$location")
+    }
+
+    suspend fun setLocation(member: String, location: String) {
+        try {
+            setLocation(member, location.toLocation())
+        }
+        catch(e: Throwable) {
+            sendTo(member, "ERROR", "Invalid location: $location")
+        }
+    }
+
+    suspend fun setDistance(member: String, distance: String) {
+        try {
+            memberData[member]?.apply {
+                this.dist = distance.trim().toDouble()
+            }
+        } catch (e: Throwable) {
+            sendTo(member, "ERROR", "Invalid request: $distance")
+        }
+    }
+
+    suspend fun dump(member: String) {
+        sendTo(member, "INFO", "$memberData")
+    }
+
+    suspend fun removeLocation(member: String) {
+        memberData[member]?.apply {
+            this.location = null
+            this.global = true
         }
     }
 
@@ -112,4 +159,27 @@ class LiveServer {
             }
         }
     }
+}
+
+private data class MemberData(
+        var location: Location?,
+        var global: Boolean,
+        var dist: Double = 100.0
+)
+
+data class Location(
+        var lat: Double,
+        var lon: Double
+)
+
+fun String.toLocation(): Location{
+    val part = trim().split("\\s".toRegex())
+
+    if(part.size != 2) throw Throwable("Invalid format")
+
+    return Location(
+            part[0].toDouble(),
+            part[1].toDouble()
+    )
+
 }
